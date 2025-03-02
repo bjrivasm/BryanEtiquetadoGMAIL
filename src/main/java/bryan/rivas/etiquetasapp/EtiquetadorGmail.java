@@ -6,27 +6,20 @@ import java.util.stream.Collectors;
 
 public class EtiquetadorGmail {
     private static final String HOST = "imap.gmail.com";
-    private static final String USUARIO = "pspPracticaBryan@gmail.com";
-    private static final String CONTRASENA = "bqpt ztce qmso wpor";
+    private static final String USUARIO = "";
+    private static final String CONTRASENA = "";
     private static final int NUM_MAX_CORREOS = 7;
     private static final String ETIQUETA_HECHO = "Done";
     private static final String ETIQUETA_EN_PROGRESO = "Work in Progress";
     private static final String ETIQUETA_PENDIENTE = "To be Done";
 
-    public void etiquetarCorreos() {
-        try (Store tienda = obtenerTienda()) {
-            Folder bandejaEntrada = tienda.getDefaultFolder().getFolder("INBOX");
-            bandejaEntrada.open(Folder.READ_WRITE);
+    private Store store;
 
-            Message[] correos = bandejaEntrada.getMessages();
-            int totalCorreos = Math.min(correos.length, NUM_MAX_CORREOS);
-
-            for (int i = 0; i < totalCorreos; i++) {
-                String etiqueta = obtenerEtiquetaPorIndice(i);
-                copiarCorreoAEtiqueta(tienda, bandejaEntrada, correos[i], etiqueta);
-            }
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+    public EtiquetadorGmail() {
+        try {
+            store = obtenerTienda();
+        } catch (MessagingException e) {
+            System.out.println("Error al obtener la tienda: " + e.getMessage());
         }
     }
 
@@ -39,14 +32,31 @@ public class EtiquetadorGmail {
         return tienda;
     }
 
+    public void etiquetarCorreos() {
+        try {
+            Folder bandejaEntrada = store.getDefaultFolder().getFolder("INBOX");
+            bandejaEntrada.open(Folder.READ_WRITE);
+
+            Message[] correos = bandejaEntrada.getMessages();
+            int totalCorreos = Math.min(correos.length, NUM_MAX_CORREOS);
+
+            for (int i = 0; i < totalCorreos; i++) {
+                String etiqueta = obtenerEtiquetaPorIndice(i);
+                copiarCorreoAEtiqueta(bandejaEntrada, correos[i], etiqueta);
+            }
+        } catch (Exception e) {
+            System.out.println("Error etiquetando correos: " + e.getMessage());
+        }
+    }
+
     private String obtenerEtiquetaPorIndice(int indice) {
         if (indice < 3) return ETIQUETA_HECHO;
         if (indice == 3) return ETIQUETA_EN_PROGRESO;
         return ETIQUETA_PENDIENTE;
     }
 
-    private void copiarCorreoAEtiqueta(Store tienda, Folder bandejaEntrada, Message correo, String etiqueta) throws MessagingException {
-        Folder carpetaEtiqueta = tienda.getFolder(etiqueta);
+    private void copiarCorreoAEtiqueta(Folder bandejaEntrada, Message correo, String etiqueta) throws MessagingException {
+        Folder carpetaEtiqueta = store.getFolder(etiqueta);
         if (!carpetaEtiqueta.exists()) {
             carpetaEtiqueta.create(Folder.HOLDS_MESSAGES);
         }
@@ -55,20 +65,20 @@ public class EtiquetadorGmail {
 
     public Map<String, List<String>> obtenerCorreosEtiquetados() {
         Map<String, List<String>> correosEtiquetados = new HashMap<>();
-        try (Store tienda = obtenerTienda()) {
+        try {
             for (String etiqueta : Arrays.asList(ETIQUETA_HECHO, ETIQUETA_EN_PROGRESO, ETIQUETA_PENDIENTE)) {
-                Folder carpeta = tienda.getFolder(etiqueta);
+                Folder carpeta = store.getFolder(etiqueta);
                 if (carpeta.exists()) {
                     carpeta.open(Folder.READ_ONLY);
                     List<String> correosInfo = Arrays.stream(carpeta.getMessages())
-                            .map(m -> obtenerInfoCorreo(m))
+                            .map(this::obtenerInfoCorreo)
                             .collect(Collectors.toList());
                     correosEtiquetados.put(etiqueta, correosInfo);
                     carpeta.close(false);
                 }
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Error obteniendo correos etiquetados: " + e.getMessage());
         }
         return correosEtiquetados;
     }
@@ -80,6 +90,16 @@ public class EtiquetadorGmail {
             return "Asunto: " + asunto + " | Remitente: " + remitente;
         } catch (MessagingException e) {
             return "(Error al obtener datos del correo)";
+        }
+    }
+
+    public void cerrarConexion() {
+        try {
+            if (store != null) {
+                store.close();
+            }
+        } catch (MessagingException e) {
+            System.out.println("Error cerrando conexión: " + e.getMessage());
         }
     }
 }

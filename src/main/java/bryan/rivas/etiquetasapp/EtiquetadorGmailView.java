@@ -1,10 +1,10 @@
 package bryan.rivas.etiquetasapp;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 import java.util.Map;
-import javax.swing.table.DefaultTableModel;
 
 public class EtiquetadorGmailView extends JFrame {
     private final EtiquetadorGmail etiquetador = new EtiquetadorGmail();
@@ -30,13 +30,13 @@ public class EtiquetadorGmailView extends JFrame {
 
         JScrollPane scrollPane = new JScrollPane(table);
         add(scrollPane, BorderLayout.CENTER);
-        add(panel, BorderLayout.SOUTH); // Botón en la parte inferior
+        add(panel, BorderLayout.SOUTH);
     }
 
     private void etiquetarCorreos(DefaultTableModel tableModel) {
-        SwingWorker<Map<String, List<String>>, Void> worker = new SwingWorker<>() {
+        SwingWorker<Map<String, List<String>>, Integer> worker = new SwingWorker<>() {
             @Override
-            protected Map<String, List<String>> doInBackground() {
+            protected Map<String, List<String>> doInBackground() throws Exception {
                 etiquetador.etiquetarCorreos();
                 return etiquetador.obtenerCorreosEtiquetados();
             }
@@ -72,4 +72,3 @@ public class EtiquetadorGmailView extends JFrame {
         EventQueue.invokeLater(() -> new EtiquetadorGmailView().setVisible(true));
     }
 }
-
